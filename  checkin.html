@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>เช็คอิน รปภ.</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      background-color: #f2f2f2;
+    }
+    .card {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    button {
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    button:disabled {
+      background-color: gray;
+    }
+    .info {
+      margin-top: 1rem;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>ระบบเช็คอิน รปภ.</h2>
+    <p>กดปุ่มด้านล่างเพื่อเช็คอินและส่งตำแหน่ง</p>
+    <button onclick="checkIn()" id="checkinBtn">เช็คอิน</button>
+    <div class="info" id="status"></div>
+  </div>
+
+  <script>
+    async function checkIn() {
+      const statusEl = document.getElementById('status');
+      const button = document.getElementById('checkinBtn');
+      button.disabled = true;
+      statusEl.textContent = 'กำลังดึงตำแหน่ง...';
+
+      if (!navigator.geolocation) {
+        statusEl.textContent = 'เบราว์เซอร์นี้ไม่รองรับการใช้ GPS';
+        button.disabled = false;
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const timestamp = new Date().toISOString();
+
+        statusEl.textContent = `พิกัด: ${lat.toFixed(6)}, ${lng.toFixed(6)}\nกำลังส่งข้อมูล...`;
+
+        // ส่งข้อมูลไปยัง Google Sheet ผ่าน Web App URL (Webhook)
+        const response = await fetch('https://script.google.com/macros/s/WEB_APP_URL/exec', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            lat,
+            lng,
+            timestamp
+          })
+        });
+
+        if (response.ok) {
+          statusEl.textContent = `เช็คอินสำเร็จ เวลา: ${new Date().toLocaleString()}`;
+        } else {
+          statusEl.textContent = 'เกิดข้อผิดพลาดในการส่งข้อมูล';
+        }
+
+        button.disabled = false;
+      }, () => {
+        statusEl.textContent = 'ไม่สามารถดึงตำแหน่งได้ โปรดอนุญาตให้เข้าถึง GPS';
+        button.disabled = false;
+      });
+    }
+  </script>
+</body>
+</html>
